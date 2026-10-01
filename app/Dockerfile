@@ -65,4 +65,6 @@ RUN mkdir -p /var/www/html/uploads && \
 
 EXPOSE 80 22
 
+USER www-data
+
 ENTRYPOINT ["/entrypoint.sh"]

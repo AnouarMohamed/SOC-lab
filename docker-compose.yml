@@ -23,6 +23,7 @@ services:
       - atlas_backup
     cap_add:
       - NET_ADMIN     # Required for iptables network containment during IR
+    user: "www-data"
     restart: unless-stopped
     depends_on:
       srv-db-01:
@@ -59,6 +60,7 @@ services:
       dockerfile: Dockerfile
     container_name: nas-bkp
     hostname: nas-bkp
+    user: "svc-backup"
     networks:
       - atlas_backup
     restart: unless-stopped

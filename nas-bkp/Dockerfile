@@ -21,4 +21,6 @@ RUN echo "Atlas Historical Snapshot 2026-09-29 02:00:00" > /backups/atlas_db_202
 
 EXPOSE 22
 
+USER svc-backup
+
 CMD ["/usr/sbin/sshd", "-D", "-e"]
