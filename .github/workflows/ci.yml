@@ -7,14 +7,37 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   security-events: write
 
 jobs:
-  # =========================================================================
-  # 1. SECRET DETECTION (Shift-Left Credential Protection)
-  # =========================================================================
+  smoke-validation:
+    name: Compose + PHP smoke validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Validate Docker Compose syntax
+        run: docker compose config >/dev/null
+
+      - name: Lint PHP sources
+        run: |
+          find app/src -type f -name '*.php' -print0 | while IFS= read -r -d '' file; do
+            echo "Checking $file"
+            php -l "$file"
+          done
+
   secret-scan:
     name: Secret & Credential Scanning (Gitleaks)
     runs-on: ubuntu-latest
@@ -28,11 +51,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
 
-  # =========================================================================
-  # 2. STATIC APPLICATION SECURITY TESTING (SAST - Semgrep)
-  # =========================================================================
   sast-scan:
     name: SAST Code Analysis (Semgrep OSS)
     runs-on: ubuntu-latest
@@ -40,7 +59,7 @@ jobs:
       - name: Checkout Codebase
         uses: actions/checkout@v4
 
-      - name: Execute Semgrep Security Rulesets
+      - name: Run Semgrep security scan
         run: |
           docker run --rm -v "${{ github.workspace }}:/src" returntocorp/semgrep \
             semgrep scan \
@@ -48,11 +67,8 @@ jobs:
             --config "p/owasp-top-ten" \
             --config "p/php" \
             --error \
-            /src || true
+            /src
 
-  # =========================================================================
-  # 3. CONTAINER SECURITY & VULNERABILITY SCAN (Trivy)
-  # =========================================================================
   container-security:
     name: Container Image & Misconfiguration Scan (Trivy)
     runs-on: ubuntu-latest
@@ -60,18 +76,15 @@ jobs:
       - name: Checkout Codebase
         uses: actions/checkout@v4
 
-      - name: Run Trivy Vulnerability Scanner on Hardened Dockerfile
-        uses: aquasecurity/trivy-action@master
+      - name: Run Trivy config scan on repo
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'config'
           scan-ref: '.'
           format: 'table'
-          exit-code: '0'
+          exit-code: '1'
           severity: 'CRITICAL,HIGH'
 
-  # =========================================================================
-  # 4. DETECTION-AS-CODE LINTING (Sigma Rules Validation)
-  # =========================================================================
   sigma-validation:
     name: Sigma Detection Rule Quality & Syntax Validation
     runs-on: ubuntu-latest
