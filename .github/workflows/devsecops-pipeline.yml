@@ -89,7 +89,7 @@ jobs:
 
       - name: Run Checkov on Docker Compose and Dockerfiles
         run: |
-          checkov -d . --framework dockerfile,compose --compact --soft-fail
+          checkov -d . --framework dockerfile,yaml --compact --soft-fail
 
   # ---------------------------------------------------------------------------
   # 5. DETECTION-AS-CODE LINTING (Sigma Rules Validation)
