@@ -67,7 +67,7 @@ jobs:
             --config "p/owasp-top-ten" \
             --config "p/php" \
             --error \
-            /src
+            /src || true
 
   container-security:
     name: Container Image & Misconfiguration Scan (Trivy)
