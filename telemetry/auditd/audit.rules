@@ -1,0 +1,49 @@
+## ==============================================================================
+## Atlas Distribution S.A. - Enterprise Linux Auditd Security Ruleset
+## System: SRV-WEB-01 / SRV-DB-01 / NAS-BKP
+## Compliance: NIST SP 800-53 (AU-2 / AU-12), CIS Benchmark Level 2
+## ==============================================================================
+
+# Remove all existing audit rules
+-D
+
+# Set buffer size (20480 records)
+-b 20480
+
+# Failure mode: 1 = printk message on audit error
+-f 1
+
+## -----------------------------------------------------------------------------
+## 1. CRITICAL FILE MODIFICATION AUDITING (Persistence & Tampering)
+## -----------------------------------------------------------------------------
+# Watch user credentials and shadow databases
+-w /etc/passwd -p wa -k identity_modification
+-w /etc/shadow -p wa -k shadow_tampering
+-w /etc/group -p wa -k group_modification
+-w /etc/sudoers -p wa -k privilege_escalation
+-w /etc/sudoers.d/ -p wa -k privilege_escalation
+
+# Watch web directory for unauthorized executable drops
+-w /var/www/html/uploads/ -p wa -k web_upload_tampering
+-w /var/www/html/db.php -p rwa -k database_config_access
+-w /opt/scripts/backup.sh -p rwa -k backup_script_access
+
+# Watch SSH keys
+-w /home/svc-backup/.ssh/authorized_keys -p wa -k ssh_key_injection
+-w /root/.ssh/authorized_keys -p wa -k ssh_root_injection
+
+## -----------------------------------------------------------------------------
+## 2. SUSPICIOUS EXECUTION AND PRIVILEGE ESCALATION SYSCALLS
+## -----------------------------------------------------------------------------
+# Audit execve invocations under www-data (UID 33)
+-a always,exit -F arch=b64 -S execve -F uid=33 -k web_user_execution
+-a always,exit -F arch=b32 -S execve -F uid=33 -k web_user_execution
+
+# Audit network socket creations under www-data (Reverse shell detection)
+-a always,exit -F arch=b64 -S socket -F a0=2 -F uid=33 -k web_outbound_socket
+
+# Audit process tracing (anti-debugging / evasion)
+-a always,exit -F arch=b64 -S ptrace -k process_injection
+
+# Lock configuration to prevent runtime modification until reboot
+-e 2

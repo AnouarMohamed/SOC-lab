@@ -1,0 +1,99 @@
+name: DevSecOps CI/CD Security Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # =========================================================================
+  # 1. SECRET DETECTION (Shift-Left Credential Protection)
+  # =========================================================================
+  secret-scan:
+    name: Secret & Credential Scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks Detector
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+  # =========================================================================
+  # 2. STATIC APPLICATION SECURITY TESTING (SAST - Semgrep)
+  # =========================================================================
+  sast-scan:
+    name: SAST Code Analysis (Semgrep OSS)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Execute Semgrep Security Rulesets
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/src" returntocorp/semgrep \
+            semgrep scan \
+            --config "p/security-audit" \
+            --config "p/owasp-top-ten" \
+            --config "p/php" \
+            --error \
+            /src || true
+
+  # =========================================================================
+  # 3. CONTAINER SECURITY & VULNERABILITY SCAN (Trivy)
+  # =========================================================================
+  container-security:
+    name: Container Image & Misconfiguration Scan (Trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Run Trivy Vulnerability Scanner on Hardened Dockerfile
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
+  # =========================================================================
+  # 4. DETECTION-AS-CODE LINTING (Sigma Rules Validation)
+  # =========================================================================
+  sigma-validation:
+    name: Sigma Detection Rule Quality & Syntax Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pySigma Validator
+        run: |
+          python -m pip install --upgrade pip
+          pip install sigma-cli pySigma
+
+      - name: Validate Detection Engineering Rules
+        run: |
+          echo "[*] Checking Sigma rule syntax in telemetry/rules/sigma/..."
+          for rule in telemetry/rules/sigma/*.yml; do
+            echo "Linting: $rule"
+            sigma check "$rule" || exit 1
+          done
+          echo "[✓] All detection rules passed Sigma validation standards."

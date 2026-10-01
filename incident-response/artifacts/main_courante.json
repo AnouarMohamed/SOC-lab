@@ -1,0 +1,56 @@
+[
+  {
+    "time": "Vendredi 23h40",
+    "source": "EDR Agent",
+    "event": "Processus anormal d\u00e9tect\u00e9 sous l'utilisateur web www-data",
+    "decision": "Signalement automatique"
+  },
+  {
+    "time": "Vendredi 23h47",
+    "source": "SIEM Correlator",
+    "event": "Connexion SSH r\u00e9ussie de svc-backup depuis une IP externe non r\u00e9pertori\u00e9e",
+    "decision": "Alerte priorit\u00e9 haute"
+  },
+  {
+    "time": "Vendredi 23h55",
+    "source": "FIM / File Monitor",
+    "event": "D\u00e9p\u00f4t d'un script suspect dans /var/www/html/uploads/",
+    "decision": "Corr\u00e9lation requise"
+  },
+  {
+    "time": "Samedi 00h10",
+    "source": "NetFlow Analyzer",
+    "event": "Trafic sortant environ 10 fois sup\u00e9rieur \u00e0 la normale (Pic d'exfiltration)",
+    "decision": "Seuil d'anomalie d\u00e9pass\u00e9"
+  },
+  {
+    "time": "Samedi 00h15",
+    "source": "Analyste SOC (Astreinte)",
+    "event": "Prise en compte des 4 signaux, ouverture de l'incident INC-ATLAS-001",
+    "decision": "Qualification P1 requise"
+  },
+  {
+    "time": "2026-10-01 11:21:34",
+    "source": "Analyste SOC",
+    "event": "Incident qualifi\u00e9 en P1 - Critique par l'analyste SOC. Notification astreinte RSSI et Incident Manager lanc\u00e9e.",
+    "decision": "Validation P1 - Mobilisation cellule de crise"
+  },
+  {
+    "time": "2026-10-01 11:44:48",
+    "source": "Admin / SOC Forensics",
+    "event": "Collecte forensique terminee. Artefacts volatils et webshells extraits avec empreintes SHA-256 dans evidence_20261001_114446.",
+    "decision": "Conservation de la chaine de tracabilite"
+  },
+  {
+    "time": "2026-10-01 11:45:07",
+    "source": "Administrateur Systeme",
+    "event": "SRV-WEB-01 isole du reseau via iptables sans coupure electrique. Trafic sortant bloque.",
+    "decision": "Isolement effectif"
+  },
+  {
+    "time": "2026-10-01 11:45:08",
+    "source": "Administrateur Systeme",
+    "event": "Compte svc-backup desactive, cles SSH compromises purgees, rotation du mot de passe de la base SRV-DB-01 effectuee.",
+    "decision": "Revocation immediate des secrets"
+  }
+]

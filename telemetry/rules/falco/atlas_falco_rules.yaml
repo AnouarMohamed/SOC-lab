@@ -1,0 +1,40 @@
+# Atlas Distribution - Falco Runtime Threat Detection Rules
+# Environment: Linux Container Runtime (eBPF / Syscall Telemetry)
+
+- list: web_servers
+  items: [apache2, httpd, nginx, php-fpm]
+
+- list: interactive_binaries
+  items: [sh, bash, dash, zsh, nc, netcat, python, python3, perl]
+
+- rule: Web Server Spawns Interactive Shell
+  desc: Detects shell or scripting interpreter spawned by web server engine (Webshell / RCE Indicator)
+  condition: >
+    spawned_process and
+    proc.pname in (web_servers) and
+    proc.name in (interactive_binaries)
+  output: >
+    CRITICAL: Web server spawned shell process (user=%user.name command=%proc.cmdline pcmdline=%proc.pcmdline container=%container.name)
+  priority: CRITICAL
+  tags: [mitre_execution, T1059.004, webshell, container]
+
+- rule: File Created in Web Upload Directory with Script Extension
+  desc: Detects write or creation of executable script within web uploads mount
+  condition: >
+    open_write and
+    fd.name glob "/var/www/html/uploads/*.php*"
+  output: >
+    ALERT: Executable file dropped in web upload directory (file=%fd.name proc=%proc.name user=%user.name)
+  priority: WARNING
+  tags: [mitre_persistence, T1505.003, file_drop]
+
+- rule: Sensitive Credential Access in Web Directory
+  desc: Detects reading of database credentials or SSH private keys by web processes
+  condition: >
+    open_read and
+    (fd.name in ("/var/www/html/db.php", "/opt/scripts/backup.sh") or fd.name glob "/home/*/.ssh/*") and
+    not proc.pname in (sshd, sudo)
+  output: >
+    NOTICE: Sensitive credential accessed by non-administrative process (file=%fd.name proc=%proc.name user=%user.name)
+  priority: HIGH
+  tags: [mitre_credential_access, T1552.001]

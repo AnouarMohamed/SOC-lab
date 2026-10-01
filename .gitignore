@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables & secrets
+.env
+*.pem
+*.key
+*.id_rsa
+
+# Forensic raw memory dumps & temporary artifacts
+incident-response/artifacts/evidence_*
+incident-response/artifacts/forensics_*
+!incident-response/artifacts/.gitkeep
+!incident-response/artifacts/*.md
+!incident-response/artifacts/*.json
+
+# Operating System files
+.DS_Store
+Thumbs.db

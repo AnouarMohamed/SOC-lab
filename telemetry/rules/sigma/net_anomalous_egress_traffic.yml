@@ -1,0 +1,28 @@
+title: High Volume Network Outbound Egress Anomaly
+id: 7b17e182-cc74-4ce1-d904-30ac6b15a004
+status: test
+description: Detects statistical anomalies in outbound egress network volume exceeding 10x the rolling 30-day baseline, indicating possible database exfiltration.
+references:
+    - https://attack.mitre.org/techniques/T1048/003/
+    - https://attack.mitre.org/techniques/T1567/
+author: Atlas SecOps DFIR Team
+date: 2026-10-01
+tags:
+    - attack.exfiltration
+    - attack.t1048.003
+    - attack.t1567
+logsource:
+    category: network_traffic
+    product: zeek
+detection:
+    selection:
+        orig_bytes|gt: 52428800 # 50 MB threshold per short window
+        id.resp_p:
+            - 80
+            - 443
+            - 2222
+            - 8080
+    condition: selection
+falsepositives:
+    - Scheduled off-site disaster recovery data replication during approved maintenance windows.
+level: high

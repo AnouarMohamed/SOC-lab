@@ -1,0 +1,44 @@
+# ==============================================================================
+# Atlas Distribution - Suricata NIDS Rule Definitions (INC-ATLAS-001)
+# ==============================================================================
+
+# Rule 1: Detect Multipart File Upload containing PHP script tags into /upload.php
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"ATLAS-IDS [CRITICAL] Web Shell Ingestion Detected via HTTP Multipart POST"; \
+    flow:established,to_server; \
+    content:"POST"; http_method; \
+    content:"/upload.php"; http_uri; \
+    content:"filename="; http_client_body; \
+    content:".php"; distance:0; within:30; http_client_body; \
+    classtype:web-application-attack; \
+    sid:1000001; rev:1; \
+)
+
+# Rule 2: Detect Web Shell Invocation with Execution Parameter
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"ATLAS-IDS [CRITICAL] Active Web Shell Parameter Execution Triggered"; \
+    flow:established,to_server; \
+    content:"/uploads/"; http_uri; \
+    content:"cmd="; http_uri; \
+    classtype:trojan-activity; \
+    sid:1000002; rev:1; \
+)
+
+# Rule 3: Detect SSH Connection to Internal Tier from Untrusted External Subnet
+alert tcp $EXTERNAL_NET any -> $HOME_NET 2222 ( \
+    msg:"ATLAS-IDS [WARNING] Ingress SSH Connection Attempt to Service Port from External Source"; \
+    flow:to_server; \
+    flags:S; \
+    threshold:type limit, track by_src, count 1, seconds 60; \
+    classtype:bad-unknown; \
+    sid:1000003; rev:1; \
+)
+
+# Rule 4: High-Volume Outbound Egress Anomaly (Simulated Threshold)
+alert tcp $HOME_NET any -> $EXTERNAL_NET any ( \
+    msg:"ATLAS-IDS [ALERT] High Bandwidth Outbound Egress Surge Detected (Exfiltration Indicator)"; \
+    flow:established,from_server; \
+    content:"customer_uuid"; depth:50; \
+    classtype:policy-violation; \
+    sid:1000004; rev:1; \
+)

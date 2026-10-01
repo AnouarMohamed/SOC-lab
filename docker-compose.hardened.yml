@@ -1,0 +1,65 @@
+services:
+  # =========================================================================
+  # 1. SRV-WEB-01: Remediated & Hardened Web Tier
+  # =========================================================================
+  srv-web-01:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.hardened
+    container_name: srv-web-01-hardened
+    hostname: srv-web-01
+    environment:
+      - DB_HOST=srv-db-01
+      - DB_PORT=5432
+      - DB_NAME=atlas_db
+      - DB_USER=atlas_admin
+      - DB_PASS=RotatedSecPass_VaultEnforced2026!
+    ports:
+      - "8080:80"     # Only HTTP exposed; SSH port 2222 completely removed!
+    networks:
+      - atlas_dmz
+      - atlas_internal
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - SETUID
+      - SETGID
+    restart: unless-stopped
+    depends_on:
+      srv-db-01:
+        condition: service_healthy
+
+  # =========================================================================
+  # 2. SRV-DB-01: Hardened Database Tier
+  # =========================================================================
+  srv-db-01:
+    image: postgres:16-alpine
+    container_name: srv-db-01-hardened
+    hostname: srv-db-01
+    environment:
+      POSTGRES_DB: atlas_db
+      POSTGRES_USER: atlas_admin
+      POSTGRES_PASSWORD: RotatedSecPass_VaultEnforced2026!
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - atlas_internal
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas_admin -d atlas_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+networks:
+  atlas_dmz:
+    driver: bridge
+  atlas_internal:
+    driver: bridge
+    internal: true

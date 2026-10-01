@@ -1,0 +1,89 @@
+services:
+  # =========================================================================
+  # 1. SRV-WEB-01: Public-Facing E-Commerce & Document Exchange Web Server
+  # =========================================================================
+  srv-web-01:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: srv-web-01
+    hostname: srv-web-01
+    environment:
+      - DB_HOST=srv-db-01
+      - DB_PORT=5432
+      - DB_NAME=atlas_db
+      - DB_USER=atlas_admin
+      - DB_PASS=AtlasSecPass2026!
+    ports:
+      - "8080:80"     # Public Web Application
+      - "2222:22"     # External SSH Interface (Misconfigured exposure)
+    networks:
+      - atlas_dmz
+      - atlas_internal
+      - atlas_backup
+    cap_add:
+      - NET_ADMIN     # Required for iptables network containment during IR
+    restart: unless-stopped
+    depends_on:
+      srv-db-01:
+        condition: service_healthy
+
+  # =========================================================================
+  # 2. SRV-DB-01: Internal Tier - Customer Relational Database (40,000 PII)
+  # =========================================================================
+  srv-db-01:
+    image: postgres:16-alpine
+    container_name: srv-db-01
+    hostname: srv-db-01
+    environment:
+      POSTGRES_DB: atlas_db
+      POSTGRES_USER: atlas_admin
+      POSTGRES_PASSWORD: AtlasSecPass2026!
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - atlas_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas_admin -d atlas_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+  # =========================================================================
+  # 3. NAS-BKP: Internal Storage Tier - Backup Vault
+  # =========================================================================
+  nas-bkp:
+    build:
+      context: ./nas-bkp
+      dockerfile: Dockerfile
+    container_name: nas-bkp
+    hostname: nas-bkp
+    networks:
+      - atlas_backup
+    restart: unless-stopped
+
+  # =========================================================================
+  # 4. ATTACKER-C2: Simulated External Adversary / Red Team Emulation Box
+  # =========================================================================
+  attacker-box:
+    image: python:3.11-slim
+    container_name: attacker-box
+    hostname: threat-actor-node
+    command: tail -f /dev/null
+    volumes:
+      - ./attack:/workspace/attack
+    networks:
+      - atlas_dmz
+    depends_on:
+      - srv-web-01
+
+networks:
+  atlas_dmz:
+    driver: bridge
+  atlas_internal:
+    driver: bridge
+    internal: true
+  atlas_backup:
+    driver: bridge
+    internal: true
